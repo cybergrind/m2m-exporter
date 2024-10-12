@@ -1,0 +1,15 @@
+[project]
+name = "m2m-exporter"
+version = "0.1.0"
+dependencies = ["httpx", "fastapi"]
+
+[tool.ruff.format]
+quote-style = "single"
+
+
+[tool.uv]
+package = false
+dev-dependencies = ["ruff"]
+
+[tool.uv.pip]
+python = "3.13"
