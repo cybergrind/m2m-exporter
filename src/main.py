@@ -25,7 +25,7 @@ app = FastAPI()
 log = logging.getLogger('m2m-exporter')
 STORED_METRICS: list[str] = []
 
-SKIP_METRICS = os.getenv('SKIP_METRICS', 'revenue')
+SKIP_METRICS = os.getenv('SKIP_METRICS', '')
 SKIP_QUERY = ''
 if SKIP_METRICS:
     SKIP_QUERY = '|'.join(SKIP_METRICS.split(','))
@@ -33,7 +33,7 @@ if SKIP_METRICS:
 PROMETHEUS = os.getenv('PROMETHEUS', 'localhost:9090')
 PORT = os.getenv('PORT', 8080)
 CURRENT_LABEL = os.getenv('CURRENT_LABEL', 'time')
-NOW_LABEL = os.getenv('NOW_LABEL', 'now')
+NOW_LABEL = os.getenv('NOW_LABEL', 'curr')
 LOOP_INTERVAL = 60
 
 API_URL = f'http://{PROMETHEUS}/api/v1/query_range'
@@ -51,12 +51,12 @@ def metric_to_string(name, value, labels={}) -> str:
 
 SKIP_LABELS = ['job', 'endpoint', 'instance', 'pod', 'prometheus', 'service']
 async def get_metrics_for_time(dt: datetime.datetime, time_label: str) -> list[str]:
-    query = f'{{{CURRENT_LABEL}="{NOW_LABEL}"{SKIP_QUERY}}} @ end()'
+    query = f'{{{CURRENT_LABEL}="{NOW_LABEL}"{SKIP_QUERY}}}'
     #query = 'up'
     log.info(f'Query: {query} {dt.strftime("%s")=} => {dt=}')
     response = await client.post(API_URL, data={
         'query': query,
-        'start': (dt-datetime.timedelta(seconds=600)).strftime('%s'),
+        'start': dt.strftime('%s'),
         'end': dt.strftime('%s'),
         'max_source_resolution': 'auto',  # important for compacted
         'partial_response': 'false',
