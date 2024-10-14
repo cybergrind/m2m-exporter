@@ -20,7 +20,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - run: |
+      - run: >
           TAG=latest
-          make build
-          make push
+          make build push
