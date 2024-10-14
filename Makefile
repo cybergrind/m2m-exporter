@@ -9,16 +9,17 @@ LOCAL_PROMETHEUS=$(LOCAL_IP):9090
 
 build:
 	docker build -f Dockerfile -t m2m-exporter .
-
+	docker tag m2m-exporter $(GHCR_NAME)
 
 docker-run:
 	docker rm -f $(LOCAL_NAME) || true
-	docker run --name $(LOCAL_NAME) -e PROMETHEUS=$(LOCAL_PROMETHEUS) m2m-exporter:latest
+	docker run --name $(LOCAL_NAME) \
+		-e NOW_LABEL=now -e PROMETHEUS=$(LOCAL_PROMETHEUS) -e PORT=$(PORT) \
+		-p $(PORT):$(PORT) $(GHCR_NAME)
 
 push:
-	docker tag m2m-exporter $(GHCR_NAME)
 	docker push $(GHCR_NAME)
 
 server:
-	uv run gunicorn -b localhost:$(PORT) "src.main:app" \
+	uv run gunicorn -b 0.0.0.0:$(PORT) "src.main:app" \
 		--worker-class uvicorn.workers.UvicornWorker

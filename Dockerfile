@@ -6,6 +6,7 @@ ADD pyproject.toml uv.lock /home/code/
 RUN uv sync
 
 COPY src /home/code/src
+COPY Makefile /home/code/
 
 
 ENV PROMETHEUS=prometheus:9090
@@ -14,4 +15,4 @@ ENV CURRENT_LABEL=time
 ENV NOW_LABEL=curr
 ENV SKIP_METRICS=
 
-CMD ./.venv/bin/python src/main.py
+CMD make server
