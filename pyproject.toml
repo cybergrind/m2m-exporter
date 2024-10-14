@@ -1,11 +1,7 @@
 [project]
 name = "m2m-exporter"
 version = "0.1.0"
-dependencies = ["httpx", "fastapi"]
-
-[tool.ruff.format]
-quote-style = "single"
-
+dependencies = ["httpx", "fastapi", "gunicorn", "uvicorn"]
 
 [tool.uv]
 package = false
@@ -13,3 +9,35 @@ dev-dependencies = ["ruff"]
 
 [tool.uv.pip]
 python = "3.13"
+
+[tool.ruff]
+line-length = 100
+select = [
+  "E",     # pycodestyle
+  "F",     # pyflakes
+  "I",     # isort
+  "G",     # flake8-logging-format
+  "ASYNC", # flake8-async
+  "PIE",   # flake8-pie
+  "T20",   # flake8-print
+  "PT",    # flake8-pytest-style
+  "Q",     # flake8-quotes
+]
+ignore = [
+  "Q001",
+  "Q003",
+  "G004"
+]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+known-first-party = ['snapshot_manager']
+lines-after-imports = 2
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "single"
+multiline-quotes = "single"

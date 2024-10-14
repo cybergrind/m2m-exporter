@@ -12,15 +12,21 @@ The searches metrics backwards for 1 and 2 months and exposes
 previous values
 """
 
-import os
-import datetime
-from fastapi import FastAPI
-import httpx
-import logging
 import asyncio
+from contextlib import suppress
+import datetime
+import logging
+import os
+import time
+
+import gunicorn
+import httpx
+from fastapi import FastAPI, Response
+from starlette.responses import PlainTextResponse
 
 
 logging.basicConfig(level=logging.INFO)
+gunicorn.SERVER_SOFTWARE = ''
 
 app = FastAPI()
 log = logging.getLogger('m2m-exporter')
@@ -35,21 +41,24 @@ PROMETHEUS = os.getenv('PROMETHEUS', 'localhost:9090')
 PORT = os.getenv('PORT', 8080)
 CURRENT_LABEL = os.getenv('CURRENT_LABEL', 'time')
 NOW_LABEL = os.getenv('NOW_LABEL', 'curr')
-LOOP_INTERVAL = 60
+LOOP_INTERVAL = 300
 SKIP_LABELS = ['job', 'endpoint', 'instance', 'pod', 'prometheus', 'service']
 
 API_URL = f'http://{PROMETHEUS}/api/v1/query_range'
 client = httpx.AsyncClient()
 
 
-@app.get('/metrics')
-async def read_metrics():
+@app.get('/metrics', response_class=PlainTextResponse)
+async def read_metrics(response: Response):
+    response.headers['server'] = ''
     return '\n'.join(STORED_METRICS)
 
 
-def metric_to_string(name, value, labels={}) -> str:
+def metric_to_string(name, value, labels=None) -> str:
     if labels:
         labels = '{' + ','.join([f'{k}="{v}"' for k, v in labels.items()]) + '}'
+    else:
+        labels = ''
     return f'{name}{labels} {value}'
 
 
@@ -92,9 +101,17 @@ async def get_metrics_for_time(dt: datetime.datetime, time_label: str) -> list[s
 
 async def update_metrics():
     log.info('update metrics')
+    t = time.time()
     new_metrics = []
     new_metrics.extend(await get_metrics_for_time(minus_months(1), 'prev'))
     new_metrics.extend(await get_metrics_for_time(minus_months(2), 'prev_prev'))
+    new_metrics.extend(
+        [
+            metric_to_string('up', 1),
+            metric_to_string('last_update', datetime.datetime.now().strftime('%s')),
+            metric_to_string('update_duration', f'{time.time() - t:.6f}'),
+        ]
+    )
     STORED_METRICS[:] = new_metrics
 
 
@@ -103,7 +120,12 @@ async def update_metrics_loop():
     app.add_event_handler('shutdown', shutdown.set)
     while not shutdown.is_set():
         await update_metrics()
-        await asyncio.sleep(LOOP_INTERVAL)
+        with suppress(asyncio.TimeoutError):
+            await asyncio.wait_for(shutdown.wait(), timeout=LOOP_INTERVAL)
+
+
+async def spawn_update_metrics_loop():
+    asyncio.create_task(update_metrics_loop())
 
 
 def minus_months(months=1, now=None):
@@ -116,7 +138,7 @@ def minus_months(months=1, now=None):
     return now.replace(month=now.month - months)
 
 
-app.add_event_handler('startup', update_metrics_loop)
+app.add_event_handler('startup', spawn_update_metrics_loop)
 
 
 async def async_main():
