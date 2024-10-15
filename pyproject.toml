@@ -1,7 +1,13 @@
 [project]
 name = "m2m-exporter"
 version = "0.1.0"
-dependencies = ["httpx", "fastapi", "gunicorn", "uvicorn"]
+dependencies = [
+  "fastapi",
+  "gunicorn",
+  "httpx",
+  "pydantic-settings",
+  "uvicorn",
+]
 
 [tool.uv]
 package = false

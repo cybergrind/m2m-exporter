@@ -13,15 +13,15 @@ previous values
 """
 
 import asyncio
-from contextlib import suppress
 import datetime
 import logging
-import os
 import time
+from contextlib import suppress
 
 import gunicorn
 import httpx
 from fastapi import FastAPI, Response
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from starlette.responses import PlainTextResponse
 
 
@@ -30,21 +30,30 @@ gunicorn.SERVER_SOFTWARE = ''
 
 app = FastAPI()
 log = logging.getLogger('m2m-exporter')
-STORED_METRICS: list[str] = []
 
-SKIP_METRICS = os.getenv('SKIP_METRICS', '')
+
+class Settings(BaseSettings):
+    prometheus: str = 'localhost:9090'
+    port: int = 8080
+    current_label: str = 'time'
+    now_label: str = 'curr'
+    loop_interval: int = 300
+    skip_metrics: str = ''
+
+    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
+
+
+settings = Settings()
+STORED_METRICS: list[str] = []
 SKIP_QUERY = ''
-if SKIP_METRICS:
-    SKIP_QUERY = '|'.join(SKIP_METRICS.split(','))
+
+if settings.skip_metrics:
+    SKIP_QUERY = '|'.join(settings.skip_metrics.split(','))
     SKIP_QUERY = f',__name__!~"{SKIP_QUERY}"'
-PROMETHEUS = os.getenv('PROMETHEUS', 'localhost:9090')
-PORT = os.getenv('PORT', 8080)
-CURRENT_LABEL = os.getenv('CURRENT_LABEL', 'time')
-NOW_LABEL = os.getenv('NOW_LABEL', 'curr')
-LOOP_INTERVAL = 300
 SKIP_LABELS = ['job', 'endpoint', 'instance', 'pod', 'prometheus', 'service']
 
-API_URL = f'http://{PROMETHEUS}/api/v1/query_range'
+API_URL = f'http://{settings.prometheus}/api/v1/query_range'
+log.info(f'Using {API_URL=}')
 client = httpx.AsyncClient()
 
 
@@ -63,8 +72,7 @@ def metric_to_string(name, value, labels=None) -> str:
 
 
 async def get_metrics_for_time(dt: datetime.datetime, time_label: str) -> list[str]:
-    query = f'{{{CURRENT_LABEL}="{NOW_LABEL}"{SKIP_QUERY}}}'
-    # query = 'up'
+    query = f'{{{settings.current_label}="{settings.now_label}"{SKIP_QUERY}}}'
     log.info(f'Query: {query} {dt.strftime("%s")=} => {dt=}')
     response = await client.post(
         API_URL,
@@ -92,7 +100,7 @@ async def get_metrics_for_time(dt: datetime.datetime, time_label: str) -> list[s
         labels = metric['metric']
         for k in SKIP_LABELS:
             labels.pop(k, None)
-        labels[CURRENT_LABEL] = time_label
+        labels[settings.current_label] = time_label
         value = metric['values'][-1][1]
         metrics.append(metric_to_string(name, value, labels))
     log.info(f'Got {metrics=}')
@@ -119,9 +127,12 @@ async def update_metrics_loop():
     shutdown = asyncio.Event()
     app.add_event_handler('shutdown', shutdown.set)
     while not shutdown.is_set():
-        await update_metrics()
+        try:
+            await update_metrics()
+        except Exception as e:
+            log.exception(f'During update: {e}')
         with suppress(asyncio.TimeoutError):
-            await asyncio.wait_for(shutdown.wait(), timeout=LOOP_INTERVAL)
+            await asyncio.wait_for(shutdown.wait(), timeout=settings.loop_interval)
 
 
 async def spawn_update_metrics_loop():
