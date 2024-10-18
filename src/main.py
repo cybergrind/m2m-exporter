@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 """
 env:
   PROMETHEUS - host, required
@@ -58,7 +58,7 @@ client = httpx.AsyncClient()
 
 
 @app.get('/metrics', response_class=PlainTextResponse)
-async def read_metrics(response: Response):
+def read_metrics(response: Response):
     response.headers['server'] = ''
     return '\n'.join(STORED_METRICS)
 
@@ -135,8 +135,8 @@ async def update_metrics_loop():
             await asyncio.wait_for(shutdown.wait(), timeout=settings.loop_interval)
 
 
-async def spawn_update_metrics_loop():
-    asyncio.create_task(update_metrics_loop())
+def spawn_update_metrics_loop():
+    asyncio.create_task(update_metrics_loop())  # noqa: RUF006
 
 
 def minus_months(months=1, now=None):

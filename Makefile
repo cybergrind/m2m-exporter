@@ -7,6 +7,9 @@ LOCAL_IP=$(shell ip -4 addr show docker0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
 LOCAL_PROMETHEUS=$(LOCAL_IP):9090
 
 
+check:
+	uv run pre-commit -- run --all-files --show-diff-on-failure
+
 build:
 	docker build -f Dockerfile -t m2m-exporter .
 	docker tag m2m-exporter $(GHCR_NAME)

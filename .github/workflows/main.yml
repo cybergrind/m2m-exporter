@@ -20,6 +20,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.4.24"
+      - run: |
+          uv run pre-commit run --all-files --show-diff-on-failure
       - run: >
           TAG=latest
           make build push

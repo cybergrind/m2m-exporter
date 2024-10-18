@@ -11,7 +11,10 @@ dependencies = [
 
 [tool.uv]
 package = false
-dev-dependencies = ["ruff"]
+dev-dependencies = [
+  "ruff==0.4.10",
+  "pre-commit",
+]
 
 [tool.uv.pip]
 python = "3.13"
@@ -28,6 +31,7 @@ select = [
   "T20",   # flake8-print
   "PT",    # flake8-pytest-style
   "Q",     # flake8-quotes
+  "RUF",
 ]
 ignore = [
   "Q001",
