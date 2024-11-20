@@ -17,7 +17,7 @@ build:
 docker-run:
 	docker rm -f $(LOCAL_NAME) || true
 	docker run --name $(LOCAL_NAME) \
-		-e NOW_LABEL=now -e PROMETHEUS=$(LOCAL_PROMETHEUS) -e PORT=$(PORT) \
+		-e NOW_LABEL=curr -e PROMETHEUS=$(LOCAL_PROMETHEUS) -e PORT=$(PORT) \
 		-e LOOP_INTERVAL=10 \
 		-p $(PORT):$(PORT) $(GHCR_NAME)
 

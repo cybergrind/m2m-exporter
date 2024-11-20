@@ -15,6 +15,7 @@ previous values
 import asyncio
 import datetime
 import logging
+import os
 import time
 from contextlib import suppress
 
@@ -25,7 +26,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from starlette.responses import PlainTextResponse
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG if os.getenv('DEBUG') else logging.INFO)
 gunicorn.SERVER_SOFTWARE = ''
 
 app = FastAPI()
@@ -89,13 +90,9 @@ async def get_metrics_for_time(dt: datetime.datetime, time_label: str) -> list[s
         log.error(f'Error getting metrics: {response.text}')
         return []
     raw_data = response.json()
-    # log.info(f'Got {raw_data}')
     data = raw_data.get('data', {}).get('result', [])
-    # log.info(f'Got {len(data)} metrics for {time_label}')
-    # log.info(f'{data}')
     metrics = []
     for metric in data:
-        # log.info(f'{metric=}')
         name = metric['metric'].pop('__name__')
         labels = metric['metric']
         for k in SKIP_LABELS:
@@ -103,7 +100,7 @@ async def get_metrics_for_time(dt: datetime.datetime, time_label: str) -> list[s
         labels[settings.current_label] = time_label
         value = metric['values'][-1][1]
         metrics.append(metric_to_string(name, value, labels))
-    log.info(f'Got {metrics=}')
+    log.debug(f'Got {metrics=}')
     return metrics
 
 
