@@ -13,11 +13,11 @@ previous values
 """
 
 import asyncio
+import contextlib
 import datetime
 import logging
 import os
 import time
-from contextlib import suppress
 
 import gunicorn
 import httpx
@@ -26,10 +26,21 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from starlette.responses import PlainTextResponse
 
 
-logging.basicConfig(level=logging.DEBUG if os.getenv('DEBUG') else logging.INFO)
+logging.basicConfig(
+    level=logging.DEBUG if os.getenv('DEBUG') else logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+)
 gunicorn.SERVER_SOFTWARE = ''
 
-app = FastAPI()
+
+@contextlib.asynccontextmanager
+async def spawn_update_metrics_loop(app: FastAPI):
+    task = asyncio.create_task(update_metrics_loop())
+    yield
+    task.cancel()
+
+
+app = FastAPI(lifespan=spawn_update_metrics_loop)
 log = logging.getLogger('m2m-exporter')
 
 
@@ -101,6 +112,7 @@ async def get_metrics_for_time(dt: datetime.datetime, time_label: str) -> list[s
         value = metric['values'][-1][1]
         metrics.append(metric_to_string(name, value, labels))
     log.debug(f'Got {metrics=}')
+    log.info(f'{dt} => number of metrics: {len(metrics)}')
     return metrics
 
 
@@ -121,19 +133,12 @@ async def update_metrics():
 
 
 async def update_metrics_loop():
-    shutdown = asyncio.Event()
-    app.add_event_handler('shutdown', shutdown.set)
-    while not shutdown.is_set():
+    while True:
         try:
             await update_metrics()
         except Exception as e:
             log.exception(f'During update: {e}')
-        with suppress(asyncio.TimeoutError):
-            await asyncio.wait_for(shutdown.wait(), timeout=settings.loop_interval)
-
-
-def spawn_update_metrics_loop():
-    asyncio.create_task(update_metrics_loop())  # noqa: RUF006
+        await asyncio.sleep(settings.loop_interval)
 
 
 def minus_months(months=1, now=None):
