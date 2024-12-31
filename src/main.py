@@ -146,9 +146,18 @@ def minus_months(months=1, now=None):
     respects month
     """
     now = now or datetime.datetime.now()
-    if now.month <= months:
-        return now.replace(year=now.year - 1, month=now.month + 12 - months)
-    return now.replace(month=now.month - months)
+    target_month = now.month - months
+    target_year = now.year
+    if target_month <= 0:
+        target_month = 12 + target_month
+        target_year -= 1
+    target_day = now.day
+    while True:
+        try:
+            return now.replace(year=target_year, month=target_month, day=target_day)
+        except ValueError:
+            target_day = now.day - 1
+            return now.replace(year=target_year, month=target_month, day=target_day, hour=23, minute=59, second=59, microsecond=999999)
 
 
 app.add_event_handler('startup', spawn_update_metrics_loop)

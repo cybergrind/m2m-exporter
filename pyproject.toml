@@ -1,19 +1,16 @@
 [project]
 name = "m2m-exporter"
 version = "0.1.0"
-dependencies = [
-  "fastapi",
-  "gunicorn",
-  "httpx",
-  "pydantic-settings",
-  "uvicorn",
-]
+dependencies = ["fastapi", "gunicorn", "httpx", "pydantic-settings", "uvicorn"]
+
 
 [tool.uv]
 package = false
 dev-dependencies = [
-  "ruff==0.4.10",
-  "pre-commit",
+    "ruff==0.4.10",
+    "pre-commit",
+    "pytest>=8.3.4",
+    "pytest-asyncio>=0.25.0",
 ]
 
 [tool.uv.pip]
@@ -22,22 +19,18 @@ python = "3.13"
 [tool.ruff]
 line-length = 100
 select = [
-  "E",     # pycodestyle
-  "F",     # pyflakes
-  "I",     # isort
-  "G",     # flake8-logging-format
-  "ASYNC", # flake8-async
-  "PIE",   # flake8-pie
-  "T20",   # flake8-print
-  "PT",    # flake8-pytest-style
-  "Q",     # flake8-quotes
-  "RUF",
+    "E",     # pycodestyle
+    "F",     # pyflakes
+    "I",     # isort
+    "G",     # flake8-logging-format
+    "ASYNC", # flake8-async
+    "PIE",   # flake8-pie
+    "T20",   # flake8-print
+    "PT",    # flake8-pytest-style
+    "Q",     # flake8-quotes
+    "RUF",
 ]
-ignore = [
-  "Q001",
-  "Q003",
-  "G004"
-]
+ignore = ["Q001", "Q003", "G004"]
 
 [tool.ruff.format]
 quote-style = "single"
